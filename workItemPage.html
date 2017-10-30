@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Work item form page sample</title>
+</head>
+
+<body style="overflow:auto;">
+    <script src="sdk/scripts/VSS.SDK.js"></script>
+
+    <script>
+        VSS.init({
+            explicitNotifyLoaded: true,
+            usePlatformScripts: true
+        });
+        VSS.require(["TFS/WorkItemTracking/Services"], function (_WorkItemServices) {
+            // Get the WorkItemFormService.  This service allows you to get/set fields/links on the 'active' work item (the work item
+            // that currently is displayed in the UI).
+            function getWorkItemFormService()
+            {
+                return _WorkItemServices.WorkItemFormService.getService();
+            }
+            // Register a listener for the work item page contribution
+            VSS.register(VSS.getContribution().id, function () {
+                return {
+                    // Called when the active work item is modified
+                    onFieldChanged: function(args) {
+                        $(".events").append($("<div/>").text("onFieldChanged - " + JSON.stringify(args)));
+                    },
+                    
+                    // Called when a new work item is being loaded in the UI
+                    onLoaded: function (args) {
+                        var str="";
+                        getWorkItemFormService().then(function(service) {
+                            service.getFieldValue(["System.Id"]).then(
+                                function(value){
+                                    console.log("参数：" + value);
+                                    $.ajax({
+                                        url: 'http://localhost:50400/api/values/'+value,
+                                        type: 'get',
+                                        dataType:"xml",
+                                        success: function (data) {
+                                            console.info(data);
+                                            debugger;
+                                            $(".events").append($("<div/>").text(data));
+                                            $(data).find("ExampleReturnObject").each(function(){
+                                                var Id = $(this).find("Id").text();
+                                                var name = $(this).find("Name").text();
+                                                var age = $(this).find("Age").text();
+                                                var gender = $(this).find("Gender").text();
+                                                str +=  "Name:" + name + " Age:" + age +" Gender:" + gender; 
+                                                console.log(str);
+                                            });
+                                            debugger;
+                                            $(".success").append($("<div/>").text(str));
+                                        },
+                                        error:function(data){
+                                            debugger;
+                                            console.log(data);
+                                        }
+                                    });
+                                },
+                                function(error) { 
+                                    window.alert(error.message); 
+                                });
+                        });
+
+
+                        // getWorkItemFormService().then(function(service) {            
+                        //     // Get the current values for a few of the common fields
+                        //     service.getFieldValues(["System.Id", "System.Title", "System.State", "System.CreatedDate"]).then(
+                        //         function (value) {
+                        //             $(".events").append($("<div/>").text("onLoaded - " + JSON.stringify(value)));
+                        //         },
+                        //         function(error) { 
+                        //             window.alert(error.message); 
+                        //         });
+                        // });
+                    },
+                    
+                    // Called when the active work item is being unloaded in the UI
+                    onUnloaded: function (args) {
+                        $(".events").empty();
+                        $(".events").append($("<div/>").text("onUnloaded - " + JSON.stringify(args)));
+                    },
+                    
+                    // Called after the work item has been saved
+                    onSaved: function (args) {
+                        $(".events").append($("<div/>").text("onSaved - " + JSON.stringify(args)));
+                    },
+                    
+                    // Called when the work item is reset to its unmodified state (undo)
+                    onReset: function (args) {
+                        $(".events").append($("<div/>").text("onReset - " + JSON.stringify(args)));
+                    },
+                    
+                    // Called when the work item has been refreshed from the server
+                    onRefreshed: function (args) {
+                        $(".events").append($("<div/>").text("onRefreshed - " + JSON.stringify(args)));
+                    }
+                }
+            });
+            VSS.notifyLoadSucceeded();
+         });
+
+
+    </script>
+
+    <!-- <p> Hello, your work item tab page contribution is now active! </p>
+    <button type="button" id="clickme">Click me!</button> -->
+    <p>接口返回值XML</p>
+    <div class='events'> </div>
+    <p>解析后</p>
+    <div class='success'> </div>
+</body>
+
+</html>
